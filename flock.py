@@ -1,4 +1,5 @@
 import taichi as ti
+import numpy as np
 
 @ti.data_oriented
 class Flock:
@@ -14,12 +15,6 @@ class Flock:
     def display(self, gui, radius=2, color=0xffffff):
         gui.circles(self.position.to_numpy(), radius=radius, color=color)
 
-    @ti.kernel
-    def pos(self):
-        for i in self.position:
-            if(all(self.visibility[i] == 1)):
-                print(self.position[i])
-
     @ti.func
     def dis(self, pos1: ti.f32, pos2: ti.f32):
         return ti.sqrt(ti.pow(pos1[0] - pos2[0], 2) + ti.pow(pos1[1] - pos2[1], 2))
@@ -29,7 +24,7 @@ class Flock:
         for me in range(self.n):
             cnt = 0
             if(all(self.visibility[me] == 1)):
-                resultant = ti.Vector([0.0, 0.0])
+                resultant = ti.Vector([0.0, 0.0], dt=ti.f32)
                 for other in range(self.n):
                     dis = self.dis(self.position[me], self.position[other])
                     if dis < vis_radius and other != me:
@@ -38,15 +33,47 @@ class Flock:
                 if cnt > 0:
                     self.acceleration[me] = ((resultant / cnt).normalized() * \
                             self.max_speed - self.velocity[me]).normalized() * 0.2
-                else:
-                    self.acceleration[me] = ti.Vector([0.0, 0.0])
+
+    @ti.kernel
+    def cohesion(self, vis_radius: ti.f32):
+        for me in range(self.n):
+            cnt = 0
+            if(all(self.visibility[me] == 1)):
+                middle_pos = ti.Vector([0.0, 0.0], dt=ti.f32)
+                for other in range(self.n):
+                    dis = self.dis(self.position[me], self.position[other])
+                    if dis < vis_radius and other != me:
+                        middle_pos += self.position[other]
+                        cnt += 1
+                if cnt > 0:
+                    self.acceleration[me] += (((middle_pos / cnt) - 
+                                    self.position[me]).normalized() * 
+                                    self.max_speed - self.velocity[me]).normalized() * 0.2
+
+    @ti.kernel
+    def separation(self, vis_radius: ti.f32, avoid_radius: ti.f32):
+        for me in range(self.n):
+            cnt = 0
+            if(all(self.visibility[me] == 1)):
+                resultant = ti.Vector([0.0, 0.0], dt=ti.f32)
+                for other in range(self.n):
+                    dis = self.dis(self.position[me], self.position[other])
+                    if dis < vis_radius and other != me:
+                        if dis < avoid_radius:
+                            diff = self.position[me] - self.position[other]
+                            resultant += diff
+                            cnt += 1
+                if cnt > 0:
+                    self.acceleration[me] += ((resultant / cnt).normalized() * \
+                            self.max_speed - self.velocity[me]).normalized() * 0.2
 
     @ti.kernel
     def initialize(self):
         for i in range(self.n):
             if i < self.f_offset:
                 self.position[i] = ti.Vector([ti.random(float), ti.random(float)])
-                self.velocity[i] = ti.Vector([ti.randn(), ti.randn()])
+                # self.velocity[i] = ti.Vector([ti.randn(), ti.randn()])
+                self.velocity[i] = ti.Vector([0.00001, 0.000001])
                 self.visibility[i] = ti.Vector([1]) # visible
             else:
                 self.position[i] = ti.Vector([-0.1, -0.1])
@@ -74,3 +101,4 @@ class Flock:
                 else:
                     self.velocity[i] += self.acceleration[i]
             self.position[i] += self.velocity[i] * dt
+            self.acceleration[i] = ti.Vector([0.0, 0.0], dt=ti.f32)

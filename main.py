@@ -4,13 +4,13 @@ from flock import Flock
 
 if __name__ == "__main__":
 
-    ti.init(arch=ti.gpu)
+    ti.init(arch=ti.gpu, kernel_profiler=True)
 
     # control
     paused = False
 
     # initialize
-    f_offset = 500 # basic amount of boid
+    f_offset = 2000 # basic amount of boid
     N = 500 + f_offset # max amount of boid
     offset = 0 # input offset
     max_speed = 1.0
@@ -45,8 +45,10 @@ if __name__ == "__main__":
                 else:
                     print("The area is full of boids")
             if e.key == 'u':
-                flock.pos()
-        flock.alignment(vis_radius=0.15)
+                ti.profiler.print_kernel_profiler_info()
+        flock.alignment(vis_radius=0.1)
+        flock.separation(vis_radius=0.1, avoid_radius=0.03)
+        flock.cohesion(vis_radius=0.1)
         flock.update(dt=dt)
         flock.display(gui=my_gui, radius=3)
         my_gui.show()
