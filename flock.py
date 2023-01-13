@@ -33,13 +33,14 @@ class Flock:
                         align += self.velocity[other]
                         cohesion += self.position[other]
                         if dis.norm() < avoid_radius:
-                            self.acceleration[m] += dis.normalized() * self.max_speed
+                            separation += dis.normalized() * self.max_speed
                         cnt += 1
                 if cnt > 0:
                     cohesion = cohesion / cnt - self.position[m]
                     align = align / cnt
-                    # 这里出现了nan
-                    self.acceleration[m] += (cohesion + align).normalized()
+                    # separation must be fast enough
+                    self.acceleration[m] += (cohesion + align).normalized() + separation
+                    # avoid is nan
                     if self.isnan(self.acceleration[m][0]):
                         self.acceleration[m] = ti.Vector([0.0, 0.0])
 
