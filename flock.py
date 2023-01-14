@@ -68,10 +68,10 @@ class Flock:
     @ti.kernel
     def update(self, dt: ti.f32):
         for i in self.position:
-            if (self.position[i][0] > 1): self.position[i][0] = 0.0
-            elif (self.position[i][1] > 1): self.position[i][1] = 0.0
-            elif (self.position[i][0] < 0): self.position[i][0] = 1.0
-            elif (self.position[i][1] < 0): self.position[i][1] = 1.0
+            if (self.position[i][0] > 1): self.position[i][0] = 1.0
+            elif (self.position[i][1] > 1): self.position[i][1] = 1.0
+            elif (self.position[i][0] < 0): self.position[i][0] = 0.0
+            elif (self.position[i][1] < 0): self.position[i][1] = 0.0
 
             if all(self.visibility[i] == 1):
                 self.velocity[i] += self.acceleration[i]
